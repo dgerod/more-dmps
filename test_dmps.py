@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 
-from mdmp import sDMP
+from dmp import DMP
 import numpy as np
 import matplotlib.pyplot as plt
 
 t = np.arange(0, np.pi/2, 0.01)
 y = np.sin(t)
 
-sdmp = sDMP()
+sdmp = DMP()
 sdmp.learn(y, t)
 
-fp = sdmp.ff.responseToTimeArray(t)
+Fp = sdmp.ff.responseToTimeArray(t)
 plt.figure()
 plt.title('Forcing Function: Desired (Fd) and predicted (Fp)')
-plt.plot(sdmp.ff.fd,'r--', label='Fd')
-plt.plot(fp,'g-', label='Fp')
+plt.plot(sdmp.ff.Fd,'r--', label='Fd')
+plt.plot(Fp,'g-', label='Fp')
 plt.show()
         
 sdmp.plan(np.pi/2)

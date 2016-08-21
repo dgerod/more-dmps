@@ -1,17 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import numpy as np
 import math
-
-class CanonicalSystem:
-    def __init__(self, decay=-2):
-        # rate that the canonical part decays
-        self.decay = decay
+import numpy as np
+from simple_cs import CanonicalSystem
         
-    def response(self, time):
-        return math.exp(self.decay*time)
-        
-class Gaussian:
+class Gaussian(object):
     def __init__(self, center=2, variance=1):
         self.center = center
         self.variance = variance
@@ -19,7 +12,7 @@ class Gaussian:
     def response(self, x):
         return math.exp(-self.variance*(x-self.center)**2)
                 
-class ForcingFunction:
+class ShapeFunction(object):
     """
     Nonlinear forcing function that drives the system to imitate a behavior
     @params
@@ -36,14 +29,16 @@ class ForcingFunction:
             self.basisFunctions.append(Gaussian())
 
         self.weights = [1] * self.nbfs
-        self.fd = []
+        
+        self.Fd = None
+        self.ns = 0
         
     def _generateCentersAndVariance(self):
         pass
     
-    def _computeWeights(self):
+    def _computeWeights(self, time):
         pass
-            
+    
     def train(self, attractor, example, time):
         """
         Provide the forcing function an example and an attractor to modify the 
@@ -56,18 +51,22 @@ class ForcingFunction:
         y0 = example[0]
         g = example[-1]
         num_samples = len(example)
+        #self.ns = num_samples  
         
-        # Generate function to interpolate the desired trajectory
+        # Resample example to amount of desired samples
         #import scipy.interpolate
-        #path = np.zeros((self.dmps, self.timesteps))
-        #x = np.linspace(0, self.cs.run_time, y_des.shape[1])
-        #for d in range(self.dmps):
-        #    path_gen = scipy.interpolate.interp1d(x, y_des[d])
-        #    for t in range(self.timesteps):  
-        #        path[d, t] = path_gen(t * self.dt)
-        #y_des = path
-        
+        #path = np.zeros((self.timesteps))
+        #x = np.linspace(0, self.cs.run_time, num_samples)
+        #path_gen = scipy.interpolate.interp1d(x, example)
+        #for t in range(self.timesteps):  
+        #   path[t] = path_gen(t * self.dt)
+        #new_example = path
+
+        #example = new_example
+        #self.ns = len(new_example)
+                 
         # CENTERS AND VARIANCES
+        # -----------------------------------------
         # self._generateCentersAndVariance()
         
         # SET CENTERS
@@ -86,6 +85,7 @@ class ForcingFunction:
             basisFunction.variance = self.nbfs/basisFunction.center
     
         # FIND Fd
+        # -----------------------------------------
         # self._calculateDesiredForcingFunction()
 
         # First, calculate velocity and acceleration assuming uniform sampling 
@@ -105,10 +105,16 @@ class ForcingFunction:
             attractorAccel = np.append(attractorAccel,response) 
 
         Fd = exampleAccel - attractorAccel
-        self.fd = Fd
+        
+        self.Fd = Fd
+        self.ns = len(Fd)
+        
+        # TODO-ADD: Here solve Fd using original and improved equations.
+        # Replace previous calculus because, it is too theoretical.
        
-        # COMPUTE WEIGHTS
-        # self.computeWeights()
+        # COMPUTE WEIGHTS or MODEL (e.g. LWR)
+        # -----------------------------------------
+        # self.computeWeights() or self.computeModel()
        
         # Find WEIGHTS for each BASIS FUNCTION by finding PSIs and Ss        
         bfIdx = 0 # basis function index
@@ -133,6 +139,10 @@ class ForcingFunction:
         Return forcing function value for an specific time, it is obtained using 
         the weights computed from a previous example.
         """
+        
+        # TODO-ADD: This is prediction, so here Fp should be calculated using original 
+        # and improved equations.
+        
         responseWithoutWeight = 0
         responseWithWeight = 0
         i = 0
@@ -141,7 +151,7 @@ class ForcingFunction:
             responseWithWeight += self.weights[i]*basisFunction.response(self.cs.response(time))
             i += 1
             
-        # TODO ADD SCALING
+        # TODO-ADD: SCALING
         return (responseWithWeight/responseWithoutWeight)*self.cs.response(time)
     
     def responseToTimeArray(self, timeArray):

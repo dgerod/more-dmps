@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
 
-class CanonicalSystem():
+class CanonicalSystem(object):
     """Implementation of the canonical dynamical system
     as described in Dr. Stefan Schaal's (2002) paper"""
 

@@ -2,7 +2,7 @@
 
 import math
 
-class Attractor:    
+class GoalAttractor(object):    
     '''
     Represents a simple spring-damper system: 
         K(g-x) - Dv
