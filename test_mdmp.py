@@ -14,7 +14,7 @@ plt.plot(y1[0,:],'r-')
 plt.plot(y1[1,:],'g-')
 plt.show()
 
-mdmp = mDMP(y1.shape[0], 100)
+mdmp = mDMP(dim=y1.shape[0], nbfs=100)
 mdmp.learnFromDemo(y1, t1)
 
 # Plot weights

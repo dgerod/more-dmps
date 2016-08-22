@@ -2,7 +2,6 @@
 
 import math
 import numpy as np
-from simple_cs import CanonicalSystem
         
 class Gaussian(object):
     def __init__(self, center=2, variance=1):
@@ -16,23 +15,23 @@ class ShapeFunction(object):
     """
     Nonlinear forcing function that drives the system to imitate a behavior
     @params
+        @params
         nbfs = number of basis functions
+        cs = CanonicalSystem used by the function
     """
-    def __init__(self, nbfs=100):
+    def __init__(self, cs=None, nbfs=100):
 
-        # rate that the forcing function's canonical part decays
-        self.cs = CanonicalSystem(-2)
+        self.cs = cs
 
         self.nbfs = nbfs
         self.basisFunctions = []
         for x in range(0,nbfs):
             self.basisFunctions.append(Gaussian())
 
-        self.weights = [1] * self.nbfs
-        
+        self.weights = [1] * self.nbfs        
         self.Fd = None
         self.ns = 0
-        
+
     def _generateCentersAndVariance(self):
         pass
     
@@ -116,7 +115,9 @@ class ShapeFunction(object):
         # -----------------------------------------
         # self.computeWeights() or self.computeModel()
        
-        # Find WEIGHTS for each BASIS FUNCTION by finding PSIs and Ss        
+        # Find WEIGHTS for each BASIS FUNCTION by finding PSIs and Ss           
+        weights = [1] * self.nbfs
+        
         bfIdx = 0 # basis function index
         for basisFunction in self.basisFunctions:
             P = np.zeros((num_samples, num_samples))
@@ -131,9 +132,11 @@ class ShapeFunction(object):
             S = np.mat(S)
             P = np.mat(P)
             Fd = np.mat(Fd)
-            self.weights[bfIdx] = np.transpose(S)*P*np.transpose(Fd)/(np.transpose(S)*P*S)
+            weights[bfIdx] = np.transpose(S)*P*np.transpose(Fd)/(np.transpose(S)*P*S)
             bfIdx += 1
-                        
+        
+        self.weights = np.array(np.squeeze(weights))
+        
     def response(self, time):
         """
         Return forcing function value for an specific time, it is obtained using 

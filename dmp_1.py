@@ -5,8 +5,9 @@ Implementation of Dynamical Motor Primitives (DMPs).
 
 import numpy as np
 
+from simple_cs import CanonicalSystem
 from attractor import GoalAttractor 
-from forcing_function import ShapeFunction
+from shape_function import ShapeFunction
  
 class DMP(object):
     '''
@@ -18,8 +19,12 @@ class DMP(object):
         nbfs int: number of basis functions
         '''
 
+        # Rate that the forcing function's canonical part decays       
+        self.cs = CanonicalSystem(-2)
+        
+        # Transformation system
         self.attractor = GoalAttractor()
-        self.ff = ShapeFunction(nbfs)
+        self.ff = ShapeFunction(self.cs, nbfs)
         
         self.exampleTraj = np.array([])
         self.exampleTime = np.array([])

@@ -5,7 +5,7 @@ trajectories.
 '''
 
 import numpy as np
-from dmp import DMP
+from dmp_1 import DMP
 
 class mDMP(object):
   '''
@@ -13,12 +13,11 @@ class mDMP(object):
   Single DMPs (sDMP). This type of DMP is used with multi-dimensional 
   trajectories.
   ''' 
-  def __init__(self, dim, nbfs):
+  def __init__(self, dim=1, nbfs=100):
         '''
-        dim int: number of coordinates of the trajectory
-        nbfs int: number of basis functions per sDMP
+        dim int: number of coordinates of the trajectory >= 1.
+        nbfs int: number of basis functions per sDMP >= 0.
         '''
-        assert (dim >= 1), "At least one dimension!"
         
         self.dmps = [DMP(nbfs) for _ in xrange(dim)]
         self.dim = dim 
@@ -44,6 +43,10 @@ class mDMP(object):
         return Fd.T, Fp.T 
         
   def learnFromDemo(self, trajectory, time):
+        '''
+        trajectory np.array([]): trajectory example (NxM).
+        time np.array([]): time of the trajectory (NxM).
+        '''
         for sdx in xrange(self.dim):
             sdmp = self.dmps[sdx]
             sdmp.learn(trajectory[sdx,:], time)
@@ -52,7 +55,11 @@ class mDMP(object):
         self.W = self._weights()
                      
   def planNewTrajectory(self, start, goal, time):
-      
+        '''
+        start float: start positio of the new trajectory.
+        goal float: end positio of the new trajectory.
+        time float: time to execute the new trajectory.
+        '''  
         ns = int(time/self.dmps[0].stepTime) 
                 
         pos = np.zeros((self.dim, ns))  
@@ -65,6 +72,7 @@ class mDMP(object):
             sdmp.setup(start[sdx], goal[sdx])
             sdmp.plan(time)
 
+            # TODO: Next line is patch as response time has 1 extra sample.
             pos[sdx,:] = np.array(np.squeeze(sdmp.responsePos[1:]))                      
             vel[sdx,:] = np.array(np.squeeze(sdmp.responseVel[1:]))                      
             acc[sdx,:] = np.array(np.squeeze(sdmp.responseAccel[1:]))                      
@@ -75,25 +83,54 @@ class mDMP(object):
 # -----------------------------------------------------------------------------
 
 from simple_cs import CanonicalSystem
-from transformation_system import TransformationSystem
-        
+from transformation_system import TransfSystem
+
 class sDMP(object):
     '''
     A Single Dynamical Movement Primitive (sDMP), it is used with one dimension
-    trajectories. And it is composed by an attractor and a forcing funtion.
+    trajectories. And it is composed by a transformation system and a canonical system.
     '''
-    def __init__(self, Dmp):
+    def __init__(self, tf):
+        '''
+        tf TransfSystem: the transformation system of a DMP.
+        '''        
         self.cs = CanonicalSystem(-2)
-        self.ts = TransformationSystem()
+        self.ts = tf
+        self.ts.configure(self.cs)
+        
+        self.exampleTraj = np.array([])
+        self.exampleTime = np.array([])
+        
+        self.start = 0.0
+        self.goal = 0.0
+        self.tau = 1.0
     
     def learn(self, trajectory, time):
+        '''
+        trajectory np.array([]): trajectory example (1xM).
+        time np.array([]): time of the trajectory (1xM).
+        '''
         self.exampleTraj = trajectory
         self.exampleTime = time
-        self.attractor.setEqPoint(self.exampleTraj[-1])
-        
-        self.ts.init(self.cs, self.attractor)
         self.ts.train(self.exampleTraj, self.exampleTime)
-  
-         
-    def plan(self, time):
-        pass
+        
+    def plan(self, start, goal, time): 
+        '''
+        start float: start positio of the new trajectory.
+        goal float: end positio of the new trajectory.
+        time float: time to execute the new trajectory.
+        '''
+        self.start = start
+        self.goal = goal        
+        return self.ts.predict(self.start, self.goal, time)
+
+# -----------------------------------------------------------------------------
+
+class mDmpUsing1stFormulation:
+    pass
+
+class mDmpUsing2ndFormulation:
+    pass
+
+class mDmpUsing3rdFormulation:
+    pass
