@@ -39,20 +39,14 @@ class DMP(object):
         self.responseAccel = np.array([0])
         self.responseVel = np.array([0])
         self.responsePos = np.array([0])
-
-    def _checkOffset(self):
-        """Check to see if initial position and goal are the same
-        if they are, offset slightly so that the forcing term is not 0"""
-
-        if (self.y0 == self.goal):
-            self.goal += 1e-4
                 
     def _discreteDefIntegral(self, sequence, startIndex, endIndex):
         return np.sum(sequence[startIndex:endIndex+1])
     
     def _setExample(self, trajectory, time):
         self.exampleTraj = trajectory
-        self.exampleTime = time        
+        self.exampleTime = time 
+        
         self.start = trajectory[0]
         self.goal = trajectory[-1]
         self.attractor.setEqPoint(self.goal)
@@ -76,7 +70,8 @@ class DMP(object):
         # CALCULATE NEW ACCEL  
         # self.attractor.response(prevPos, prevVel, stepTime)
         # newAccel = self.ts.response(self.attractor, self.ff, stepTime)
-        newAccel = self.attractor.response(currentPos, currentVel, self.stepTime) + self.ff.response(self.stepNumber * self.stepTime)        
+        newAccel = self.attractor.response(currentPos, currentVel, self.stepTime) + \
+            self.ff.response(self.stepNumber * self.stepTime)        
         self.responseAccel = np.append(self.responseAccel, newAccel)        
         
         newTime = self.stepNumber*self.stepTime
@@ -94,8 +89,8 @@ class DMP(object):
     def setup(self, start, goal, duration=1.0):
         self.start = start
         self.goal = goal
-        self.tau = duration
-                
+        self.tau = duration        
+                  
     def plan(self, time):
         self.stepNumber = 0
         totalSteps = int(time/self.stepTime)        

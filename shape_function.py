@@ -38,6 +38,13 @@ class ShapeFunction(object):
     def _computeWeights(self, time):
         pass
     
+    def _checkOffsetAndCorrect(self):
+        """Check to see if initial position and goal are the same
+        if they are, offset slightly so that the forcing term is not 0"""
+
+        if (self.y0 == self.goal):
+            self.goal += 1e-4
+            
     def train(self, attractor, example, time):
         """
         Provide the forcing function an example and an attractor to modify the 
@@ -114,10 +121,9 @@ class ShapeFunction(object):
         # COMPUTE WEIGHTS or MODEL (e.g. LWR)
         # -----------------------------------------
         # self.computeWeights() or self.computeModel()
-       
-        # Find WEIGHTS for each BASIS FUNCTION by finding PSIs and Ss           
+
+        # Find WEIGHTS for each BASIS FUNCTION by finding PSIs and Ss
         weights = [1] * self.nbfs
-        
         bfIdx = 0 # basis function index
         for basisFunction in self.basisFunctions:
             P = np.zeros((num_samples, num_samples))

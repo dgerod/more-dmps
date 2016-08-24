@@ -35,6 +35,9 @@ class TransformationSystem(TransfSystem):
         """Check to see if initial position and goal are the same
         if they are, offset slightly so that the forcing term is not 0"""
 
+        # TODO-ADD: This check must be added in this class in the shape
+        # function, too.       
+       
         if (self.y0 == self.goal):
             self.goal += 1e-4
                 
