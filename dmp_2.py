@@ -28,7 +28,7 @@ class TransformationSystem(TransfSystem):
         self.stepNumber = 0
         self.responseTime = np.array([0])
         self.responseAccel = np.array([0])
-        self.responseVel = np.array([0])
+        self.responseVel = np.array([1])
         self.responsePos = np.array([0])
 
     def _checkOffset(self):

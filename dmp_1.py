@@ -28,7 +28,7 @@ class DMP(object):
         
         self.exampleTraj = np.array([])
         self.exampleTime = np.array([])
-        self.stepTime = .01 # step time learn
+        self.stepTime = .01
         
         self.start = 0.0
         self.goal = 0.0
@@ -37,7 +37,7 @@ class DMP(object):
         self.stepNumber = 0
         self.responseTime = np.array([0])
         self.responseAccel = np.array([0])
-        self.responseVel = np.array([0])
+        self.responseVel = np.array([1])
         self.responsePos = np.array([0])
                 
     def _discreteDefIntegral(self, sequence, startIndex, endIndex):

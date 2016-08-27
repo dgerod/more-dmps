@@ -37,7 +37,7 @@ plt.show()
 # Goal attractor
 # --------------------------------
 
-from min_jerk_traj import trajectory
+from utils.min_jerk_traj import trajectory
   
 start = 0.5
 goal = 1.0

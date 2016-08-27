@@ -126,19 +126,19 @@ class ShapeFunction(object):
         weights = [1] * self.nbfs
         bfIdx = 0 # basis function index
         for basisFunction in self.basisFunctions:
-            P = np.zeros((num_samples, num_samples))
+            Psi = np.zeros((num_samples, num_samples))
             S = np.zeros((num_samples, 1))
             
             i = 0
             for datum in example:
                 S[i,:] = self.cs.response(time[i])*(g-y0) # front_term                             
-                P[i,i] = basisFunction.response(self.cs.response(time[i])) # psi
+                Psi[i,i] = basisFunction.response(self.cs.response(time[i])) 
                 i += 1
                 
             S = np.mat(S)
-            P = np.mat(P)
+            Psi = np.mat(Psi)
             Fd = np.mat(Fd)
-            weights[bfIdx] = np.transpose(S)*P*np.transpose(Fd)/(np.transpose(S)*P*S)
+            weights[bfIdx] = np.transpose(S)*Psi*np.transpose(Fd)/(np.transpose(S)*Psi*S)
             bfIdx += 1
         
         self.weights = np.array(np.squeeze(weights))
