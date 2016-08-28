@@ -1,21 +1,5 @@
-'''
-Copyright (C) 2013 Travis DeWolf
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-'''
-import numpy as np
-    
+import numpy as np  
 from cs import CanonicalSystem
 
 class TdwFormulation(object):
@@ -25,7 +9,7 @@ class TdwFormulation(object):
         # Schaal 2012
         if ay is None: ay = 25.
         self.ay = ay
-        if by is None: by = ay / 4.
+        if by is None: by = ay/4.
         self.by = by
     
     def acceleration(self, x, dx, start, goal, tau, f, s=None):
@@ -42,10 +26,10 @@ class OriginalFormulation(object):
 
     def __init__(self, K=100.):
         self.K = K
-        self.D = self.K/4.
-    
+        self.D = 2.0 * np.sqrt(self.K)    
+            
     def acceleration(self, x, dx, start, goal, tau, f, s=None):
-        return (self.K * (goal - x) - self.D * dx + (goal - start) * f) / tau
+        return (self.K * (goal - x) - self.D * dx + (goal - start)*f) / tau
   
     def fs(self, y, dy, ddy, start, goal, tau, s=None):
         return ((-1 * self.K * (goal - y) + self.D * dy + tau * ddy) / (goal - start))
@@ -54,25 +38,22 @@ class ImprovedFormulation(object):
     
     def __init__(self, K=100.):
         self.K = K
-        self.D = self.K/4.
+        self.D = 2.0 * np.sqrt(self.K)    
     
-    def transformation(self, K, D, x, dx, start, goal, tau, f, s):
+    def acceleration(self, K, D, x, dx, start, goal, tau, f, s):
         return (K * (goal - x) - D * dx - K * (goal - start) * s + K * f) / tau
     
     def fs(self, K, D, y, dy, ddy, start, goal, tau, s):
         return ((tau**2 * ddy + D * dy * tau) / K ) - (goal - y) + ((goal - start) * s)
-    
+  
+# -----------------------------------------------------------------------------
+  
 class DMPs_discrete(object):
-   
-    """
-    An implementation of discrete DMPs
-    as described in Dr. Stefan Schaal's (2002) paper.
-    """
 
     def __init__(self, dims, bfs, ts=None, dt=.01,
                  y0=0, goal=1, w=None, 
                  ay=None, by=None, **kwargs):
-        """
+        '''
         dims int: number of dynamic motor primitives
         bfs int: number of basis functions per DMP
         dt float: timestep for simulation
@@ -81,7 +62,7 @@ class DMPs_discrete(object):
         w list: tunable parameters, control amplitude of basis functions
         ay int: gain on attractor term y dynamics
         by int: gain on attractor term y dynamics
-        """
+        '''
         
         # call super class constructor
         # ---
@@ -114,14 +95,9 @@ class DMPs_discrete(object):
         self.f_predicted = np.array([])       
         self.f = np.zeros(self.dmps)         
         
-        if ay is None: ay = np.ones(self.dmps) * 25. # Schaal 2012
-        self.ay = ay
-        if by is None: by = self.ay.copy() / 4. # Schaal 2012
-        self.by = by
-        
         # set up the CS 
         self.cs = CanonicalSystem(pattern=self.pattern, dt=self.dt, **kwargs)
-        self.timesteps = int(self.cs.run_time / self.dt)
+        self.time_steps = int(self.cs.run_time / self.dt)
 
         # set up the DMP system
         self.reset_state()
@@ -132,8 +108,10 @@ class DMPs_discrete(object):
         self.check_offset()
         
     def prep_centers_and_variances(self):
-        """Set the centre of the Gaussian basis 
-        functions be spaced evenly throughout run time"""
+        '''
+        Set the centre of the Gaussian basis functions be spaced evenly 
+        throughout run time.
+        '''
 
         # desired spacings along x
         # need to be spaced evenly between 1 and exp(-ax)
@@ -152,75 +130,71 @@ class DMPs_discrete(object):
         self.h = np.ones(self.bfs) * self.bfs**1.5 / self.c
         
     def check_offset(self):
-        """Check to see if initial position and goal are the same
-        if they are, offset slightly so that the forcing term is not 0"""
+        '''
+        Check to see if initial position and goal are the same
+        if they are, offset slightly so that the forcing term is not 0.
+        '''
 
         for d in range(self.dmps):
             if (self.y0[d] == self.goal[d]):
                 self.goal[d] += 1e-4
 
     def set_goal(self, y_des): 
-        """Generate the goal for path imitation. 
-        For rhythmic DMPs the goal is the average of the 
-        desired trajectory.
+        '''
+        Generate the goal for path imitation. For rhythmic DMPs the goal is the 
+        average of the desired trajectory.
     
         y_des np.array: the desired trajectory to follow
-        """
+        '''
 
         return y_des[:,-1].copy()
 
     def gen_psi(self, x):
-        """Generates the activity of the basis functions for a given 
-        state of the canonical system.
+        '''
+        Generates the activity of the basis functions for a given state of the 
+        canonical system.
+        
         x float: the current state of the canonical system
-        """
+        '''
 
         if isinstance(x, np.ndarray):
             x = x[:,None]
         return np.exp(-self.h * (x - self.c)**2)
 
     def gen_front_term(self, x, dmp_num):
-        """Generates the diminishing front term on 
-        the forcing term.
-        x float: the current value of the canonical system
+        '''
+        Generates the diminishing front term on the forcing term.
+        
+        x float: the current value of the canonical systemacceleration
         dmp_num int: the index of the current dmp
-        """
+        '''
         return x * (self.goal[dmp_num] - self.y0[dmp_num])
 
     def find_force_function(self, dmp_num, y, dy, ddy):
         
         d = dmp_num
-          
-        #tf = TdwFormulation()
-        #f_target = tf.fs(y[d], dy[d], ddy[d], self.y0[d], self.goal[d], 1.0)
-
         f_target = self.ts.fs(y[d], dy[d], ddy[d], self.y0[d], self.goal[d], 1.0)
-
         return f_target     
 
     def calculate_acceleration(self, dmp_num, tau, f, s):
  
         d = dmp_num
-
-        #tf = TdwFormulation()
-        #ddy = tf.acceleration(self.y[d], self.dy[d], self.y0[d], self.goal[d], tau, f)
-
         ddy = self.ts.acceleration(self.y[d], self.dy[d], self.y0[d], self.goal[d], tau, f)
-
         return ddy
         
     def compute_weights(self, f_target):
-        """Generate a set of weights over the basis functions such 
-        that the target forcing term trajectory is matched.
+        '''
+        Generate a set of weights over the basis functions such that the target forcing 
+        term trajectory is matched.
         
-        f_target np.array: the desired forcing term trajectory
-        """
-
-        # calculate x and psi   
+        f_target np.array: the desired forcing term 
+        '''
+        
+        # calculate x/s and psi(s)
         x_track = self.cs.rollout()
         psi_track = self.gen_psi(x_track)
 
-        #efficiently calculate weights for BFs using weighted linear regression
+        # efficiently calculate weights for BFs using weighted linear regression
         weights = np.zeros((self.dmps, self.bfs))
         for d in range(self.dmps):
             # spatial scaling term
@@ -229,27 +203,30 @@ class DMPs_discrete(object):
                 numer = np.sum(x_track * psi_track[:,b] * f_target[:,d])
                 denom = np.sum(x_track**2 * psi_track[:,b])
                 weights[d,b] = numer / (k * denom)
-                
+        
         return weights
 
     def reset_state(self):
-        """Reset the system state"""
+        '''
+        Reset the system state
+        '''
         self.y = self.y0.copy()
         self.dy = np.zeros(self.dmps)   
         self.ddy = np.zeros(self.dmps)  
         self.cs.reset_state()  
 
     def step(self, tau=1.0, state_fb=None, external_force=None):
-        """Run the DMP system for a single timestep.
-
+        '''
+        Run the DMP system for a single timestep.
+        # set up the DMP system
         tau float: scales the timestep
-                  increase tau to make the system execute faster
+                   increase tau to make the system execute faster
         state_fb np.array: optional system feedback
-        """
+        '''
 
         # run canonical system
-        cs_args = {'tau':tau,
-                   'error_coupling':1.0}
+        cs_args = {'tau': tau, 'error_coupling': 1.0}
+                   
         if state_fb is not None: 
             # take the 2 norm of the overall error
             state_fb = state_fb.reshape(1,self.dmps)
@@ -279,12 +256,13 @@ class DMPs_discrete(object):
         return self.y, self.dy, self.ddy
         
     def learn(self, y_des):
-        """Takes in a desired trajectory and generates the set of 
+        '''
+        Takes in a desired trajectory and generates the set of 
         system parameters that best realize this path.
     
         y_des list/array: the desired trajectories of each DMP
                           should be shaped [dmps, run_time]
-        """
+        '''
 
         # set initial state and goal
         # ---
@@ -301,11 +279,11 @@ class DMPs_discrete(object):
         # ---
 
         import scipy.interpolate
-        path = np.zeros((self.dmps, self.timesteps))
+        path = np.zeros((self.dmps, self.time_steps))
         x = np.linspace(0, self.cs.run_time, y_des.shape[1])
         for d in range(self.dmps):
             path_gen = scipy.interpolate.interp1d(x, y_des[d])
-            for t in range(self.timesteps):  
+            for t in range(self.time_steps):  
                 path[d, t] = path_gen(t * self.dt)
         y_des = path
 
@@ -340,16 +318,18 @@ class DMPs_discrete(object):
 
         return y_des
 
-    def plan(self, timesteps=None, **kwargs):
-        """Generate a system trial, no feedback is incorporated."""
+    def plan(self, time_steps=None, **kwargs):
+        '''
+        Generate a system trial, no feedback is incorporated.
+        '''
 
         self.reset_state()
 
-        if timesteps is None:
+        if time_steps is None:
             if kwargs.has_key('tau'):
-                time_steps = int(self.timesteps / kwargs['tau'])
+                time_steps = int(self.time_steps / kwargs['tau'])
             else: 
-                time_steps = self.timesteps
+                time_steps = self.time_steps
 
         # set up tracking vectors
         y_track = np.zeros((time_steps, self.dmps)) 
