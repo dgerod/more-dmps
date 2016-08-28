@@ -39,8 +39,10 @@ class ShapeFunction(object):
         pass
     
     def _checkOffsetAndCorrect(self):
-        """Check to see if initial position and goal are the same
-        if they are, offset slightly so that the forcing term is not 0"""
+        """
+        Check to see if initial position and goal are the same
+        if they are, offset slightly so that the forcing term is not 0
+        """
 
         if (self.y0 == self.goal):
             self.goal += 1e-4

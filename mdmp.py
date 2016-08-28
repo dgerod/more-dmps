@@ -25,6 +25,7 @@ class mDMP(object):
         self.ns = 0
                 
   def _weights(self):
+      
         W = np.zeros((self.dim, self.nbfs))        
         for sdx in xrange(self.dim):
             sdmp = self.dmps[sdx]
@@ -32,6 +33,7 @@ class mDMP(object):
         return W.T      
   
   def _fs(self):
+      
         Fd = np.zeros((self.dim, self.ns))        
         Fp = np.zeros((self.dim, self.ns))        
         for sdx in xrange(self.dim):
@@ -42,11 +44,12 @@ class mDMP(object):
             Fp[sdx,:] = np.array(np.squeeze(sdmp.ff.responseToTimeArray(time)))                      
         return Fd.T, Fp.T 
         
-  def learnFromDemo(self, trajectory, time):
+  def learnFromDemo(self, trajectory, time):      
         '''
         trajectory np.array([]): trajectory example (NxM).
         time np.array([]): time of the trajectory (NxM).
         '''
+        
         for sdx in xrange(self.dim):
             sdmp = self.dmps[sdx]
             sdmp.learn(trajectory[sdx,:], time)
@@ -60,6 +63,7 @@ class mDMP(object):
         goal float: end positio of the new trajectory.
         time float: time to execute the new trajectory.
         '''  
+        
         ns = int(time/self.dmps[0].stepTime) 
                 
         pos = np.zeros((self.dim, ns))  
@@ -93,7 +97,8 @@ class sDMP(object):
     def __init__(self, tf):
         '''
         tf TransfSystem: the transformation system of a DMP.
-        '''        
+        '''
+        
         self.cs = CanonicalSystem(-2)
         self.ts = tf
         self.ts.configure(self.cs)
@@ -110,6 +115,7 @@ class sDMP(object):
         trajectory np.array([]): trajectory example (1xM).
         time np.array([]): time of the trajectory (1xM).
         '''
+        
         self.exampleTraj = trajectory
         self.exampleTime = time
         self.ts.train(self.exampleTraj, self.exampleTime)
@@ -120,6 +126,7 @@ class sDMP(object):
         goal float: end positio of the new trajectory.
         time float: time to execute the new trajectory.
         '''
+        
         self.start = start
         self.goal = goal        
         return self.ts.predict(self.start, self.goal, time)

@@ -133,7 +133,8 @@ class DiscreteDMP(object):
     start = trajectory[0][0]
     goal = trajectory[-1][0]
     
-    print "create training set of movement from trajectory with %i entries (%i hz) with duration: %f, start: %f, goal: %f" % (n_samples, frequency, duration, start, goal)
+    print "create training set of movement from trajectory with %i entries (%i hz) \
+        with duration: %f, start: %f, goal: %f" % (n_samples, frequency, duration, start, goal)
     
     # compute target function input (canonical system) [rollout]
     # -----------------------------
