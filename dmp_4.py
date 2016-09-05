@@ -5,35 +5,31 @@ from cs import CanonicalSystem
 class TdwFormulation(object):
 
     def __init__(self, ay=None, by=None):
-        
-        # Schaal 2012
+        # Parameters as defined in Schaal 2012
         if ay is None: ay = 25.
         self.ay = ay
         if by is None: by = ay/4.
         self.by = by
     
-    def acceleration(self, x, dx, start, goal, tau, f, s=None):
- 
-        ddy = (self.ay *  (self.by * (goal - x) - dx/tau) + f) * tau       
-        return ddy
+    def acceleration(self, x, dx, start, goal, tau, f, s):
+        #return (self.ay *  (self.by * (goal - x) - dx/tau) + f) * tau       
+        return (self.ay *  (self.by * (goal - x) - dx/tau) + (goal - start)*f*s) * tau       
+               
+    def fs(self, y, dy, ddy, start, goal, tau, s):        
+        return (ddy - self.ay * (self.by * (goal - y) - dy) / (goal - start))
         
-    def fs(self, y, dy, ddy, start, goal, tau, s=None):
-        
-        f_target = ddy - self.ay * (self.by * (goal - y) - dy)
-        return f_target
-            
 class OriginalFormulation(object):
 
     def __init__(self, K=100.):
         self.K = K
         self.D = 2.0 * np.sqrt(self.K)    
             
-    def acceleration(self, x, dx, start, goal, tau, f, s=None):
-        return (self.K * (goal - x) - self.D * dx + (goal - start)*f) / tau
+    def acceleration(self, x, dx, start, goal, tau, f, s):
+        return (self.K * (goal - x) - self.D * dx + (goal - start)*f*s) / tau
   
-    def fs(self, y, dy, ddy, start, goal, tau, s=None):
+    def fs(self, y, dy, ddy, start, goal, tau, s):
         return ((-1 * self.K * (goal - y) + self.D * dy + tau * ddy) / (goal - start))
-
+        
 class ImprovedFormulation(object):
     
     def __init__(self, K=100.):
@@ -165,21 +161,21 @@ class DMPs_discrete(object):
         '''
         Generates the diminishing front term on the forcing term.
         
-        x float: the current value of the canonical systemacceleration
+        x float: the current value of the canonical system acceleration
         dmp_num int: the index of the current dmp
         '''
         return x * (self.goal[dmp_num] - self.y0[dmp_num])
 
-    def find_force_function(self, dmp_num, y, dy, ddy):
+    def find_force_function(self, dmp_num, y, dy, ddy, s):
         
         d = dmp_num
-        f_target = self.ts.fs(y[d], dy[d], ddy[d], self.y0[d], self.goal[d], 1.0)
+        f_target = self.ts.fs(y[d], dy[d], ddy[d], self.y0[d], self.goal[d], 1.0, s)
         return f_target     
 
     def calculate_acceleration(self, dmp_num, tau, f, s):
  
         d = dmp_num
-        ddy = self.ts.acceleration(self.y[d], self.dy[d], self.y0[d], self.goal[d], tau, f)
+        ddy = self.ts.acceleration(self.y[d], self.dy[d], self.y0[d], self.goal[d], tau, f, s)
         return ddy
         
     def compute_weights(self, f_target):
@@ -198,9 +194,11 @@ class DMPs_discrete(object):
         weights = np.zeros((self.dmps, self.bfs))
         for d in range(self.dmps):
             # spatial scaling term
-            k = (self.goal[d] - self.y0[d])
+            #k = (self.goal[d] - self.y0[d])
+            k = 1.0
+            
             for b in range(self.bfs):
-                numer = np.sum(x_track * psi_track[:,b] * f_target[:,d])
+                numer = np.sum(x_track    * psi_track[:,b] * f_target[:,d])
                 denom = np.sum(x_track**2 * psi_track[:,b])
                 weights[d,b] = numer / (k * denom)
         
@@ -218,7 +216,7 @@ class DMPs_discrete(object):
     def step(self, tau=1.0, state_fb=None, external_force=None):
         '''
         Run the DMP system for a single timestep.
-        # set up the DMP system
+        
         tau float: scales the timestep
                    increase tau to make the system execute faster
         state_fb np.array: optional system feedback
@@ -237,28 +235,28 @@ class DMPs_discrete(object):
         # generate basis function activation
         psi = self.gen_psi(x)
 
-        for d in range(self.dmps):
+        for idx in range(self.dmps):
 
             # generate the forcing function
-            self.f[d] = self.gen_front_term(x, d) * \
-                (np.dot(psi, self.w[d])) / np.sum(psi)            
+            #self.f[idx] = self.gen_front_term(x, idx) * (np.dot(psi, self.w[idx])) / np.sum(psi)            
+            self.f[idx] = (np.dot(psi, self.w[idx])) / np.sum(psi)            
 
             # DMP acceleration
-            self.ddy[d] = self.calculate_acceleration(d, tau, self.f[d], x)
+            self.ddy[idx] = self.calculate_acceleration(idx, tau, self.f[idx], x)
 
             # Correct acceleration
             if external_force is not None:
-                self.ddy[d] += external_force[d]
+                self.ddy[idx] += external_force[idx]
                         
-            self.dy[d] += self.ddy[d] * tau * self.dt * cs_args['error_coupling']
-            self.y[d] += self.dy[d] * self.dt * cs_args['error_coupling']
+            self.dy[idx] += self.ddy[idx] * tau * self.dt * cs_args['error_coupling']
+            self.y[idx] += self.dy[idx] * self.dt * cs_args['error_coupling']
 
         return self.y, self.dy, self.ddy
         
     def learn(self, y_des):
         '''
-        Takes in a desired trajectory and generates the set of 
-        system parameters that best realize this path.
+        Takes in a desired trajectory and generates the set of system parameters 
+        that best realize this path.
     
         y_des list/array: the desired trajectories of each DMP
                           should be shaped [dmps, run_time]
@@ -281,10 +279,10 @@ class DMPs_discrete(object):
         import scipy.interpolate
         path = np.zeros((self.dmps, self.time_steps))
         x = np.linspace(0, self.cs.run_time, y_des.shape[1])
-        for d in range(self.dmps):
-            path_gen = scipy.interpolate.interp1d(x, y_des[d])
+        for idx in range(self.dmps):
+            path_gen = scipy.interpolate.interp1d(x, y_des[idx])
             for t in range(self.time_steps):  
-                path[d, t] = path_gen(t * self.dt)
+                path[idx, t] = path_gen(t * self.dt)
         y_des = path
 
         # Calculate velocity and acceleration profiles
@@ -300,20 +298,23 @@ class DMPs_discrete(object):
         # add zero to the beginning of every row
         ddy_des = np.hstack((np.zeros((self.dmps, 1)), ddy_des))
 
-        # Compute weights
+        # Compute F and weights
         # ---
 
+        # run canonical system
+        x = self.cs.rollout()
+        
         # find the force required to move along this trajectory
         f_desired = np.zeros((y_des.shape[1], self.dmps))
-        for d in range(self.dmps):
-            f_desired[:,d] = self.find_force_function(d, y_des, dy_des, ddy_des)
+        for idx in range(self.dmps):
+            f_desired[:,idx] = self.find_force_function(idx, y_des, dy_des, ddy_des, x)
         
         # efficiently generate weights to realize f_target
         self.w = self.compute_weights(f_desired)
         self.f_desired = f_desired
         
         self.reset_state()
-        self.f_predicted = np.array([])       
+        self.f_predicted = np.zeros((y_des.shape[1], self.dmps))
         self.f = np.zeros(self.dmps)         
 
         return y_des
@@ -339,7 +340,6 @@ class DMPs_discrete(object):
         f_predicted = np.zeros((time_steps, self.dmps)) 
     
         for t in range(time_steps):
-        
             y, dy, ddy = self.step(**kwargs)
             f_predicted[t] = self.f
             
