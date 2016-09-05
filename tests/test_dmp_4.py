@@ -54,7 +54,7 @@ for ii, bfs in enumerate(num_bfs):
     dmp.learn(y_des=np.array([path1, path2]))
     
     # change the goal position
-    dmp.goal[0] = 3; dmp.goal[1] = 2          
+    dmp.goal[0] = 3; dmp.goal[1] = 2  
     y_track, dy_track, ddy_track = dmp.plan()
     
     plt.subplot(211)
@@ -63,14 +63,14 @@ for ii, bfs in enumerate(num_bfs):
     plt.plot(y_track[:,1], lw=2)
     
 plt.subplot(211)
-a = plt.plot(path1 / path1[-1] * dmp.goal[0], 'r--', lw=2)
+a = plt.plot(path1 / path1[-1] * dmp.goal[0], 'c--', lw=2)
 plt.title('DMP imitate path (X)')
 plt.xlabel('time (ms)')
 plt.ylabel('system trajectory')
 plt.legend([a[0]], ['desired path'], loc='lower right')
 
 plt.subplot(212)
-b = plt.plot(path2 / path2[-1] * dmp.goal[1], 'r--', lw=2)
+b = plt.plot(path2 / path2[-1] * dmp.goal[1], 'c--', lw=2)
 plt.title('DMP imitate path (Y)')
 plt.xlabel('time (ms)')
 plt.ylabel('system trajectory')
@@ -80,9 +80,9 @@ plt.tight_layout()
 plt.show()
 
 # 
-# -------------------------------
+# -------------------------------r
 
-from dmp_4 import TdwFormulation, OriginalFormulation
+from dmp_4 import TdwFormulation, OriginalFormulation, ImprovedFormulation
 
 # test imitation of path run
 plt.figure(4, figsize=(6,4))
@@ -93,8 +93,8 @@ path1 = np.sin(np.arange(0,1,.01)*5)
 path2 = np.zeros(path1.shape)
 path2[int(len(path2) / 2.):] = .5 
 
-forms = [TdwFormulation(), OriginalFormulation()]
-name_forms = ["tdw", "original"]
+forms = [TdwFormulation(), OriginalFormulation(), ImprovedFormulation()]
+name_forms = ["tdw", "original", "improved"]
 
 num_bfs = 100
 dmps =  []
@@ -106,7 +106,7 @@ for ii, ts in enumerate(forms):
     dmp.learn(y_des=np.array([path1, path2]))
         
     # change the goal position
-    dmp.goal[0] = 3; dmp.goal[1] = 2          
+    #dmp.goal[0] = 3; dmp.goal[1] = 2          
     y_track, dy_track, ddy_track = dmp.plan()
     
     plt.subplot(211)
@@ -117,14 +117,14 @@ for ii, ts in enumerate(forms):
     dmps.append(dmp)
     
 plt.subplot(211)
-a = plt.plot(path1 / path1[-1] * dmp.goal[0], 'r--', lw=2)
+a = plt.plot(path1 / path1[-1] * dmp.goal[0], 'c--', lw=2)
 plt.title('DMP imitate path (X)')
 plt.xlabel('time (ms)')
 plt.ylabel('system trajectory')
 plt.legend([a[0]], ['desired path'], loc='lower right')
 
 plt.subplot(212)
-b = plt.plot(path2 / path2[-1] * dmp.goal[1], 'r--', lw=2)
+b = plt.plot(path2 / path2[-1] * dmp.goal[1], 'c--', lw=2)
 plt.title('DMP imitate path (Y)')
 plt.xlabel('time (ms)')
 plt.ylabel('system trajectory')

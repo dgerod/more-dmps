@@ -12,11 +12,10 @@ class TdwFormulation(object):
         self.by = by
     
     def acceleration(self, x, dx, start, goal, tau, f, s):
-        #return (self.ay *  (self.by * (goal - x) - dx/tau) + f) * tau       
-        return (self.ay *  (self.by * (goal - x) - dx/tau) + (goal - start)*f*s) * tau       
+        return (self.ay *  (self.by * (goal-x) - dx/tau) + (goal-start)*f*s) * tau       
                
     def fs(self, y, dy, ddy, start, goal, tau, s):        
-        return (ddy - self.ay * (self.by * (goal - y) - dy) / (goal - start))
+        return (ddy - self.ay * (self.by * (goal-y) - dy) / (goal-start))
         
 class OriginalFormulation(object):
 
@@ -25,10 +24,10 @@ class OriginalFormulation(object):
         self.D = 2.0 * np.sqrt(self.K)    
             
     def acceleration(self, x, dx, start, goal, tau, f, s):
-        return (self.K * (goal - x) - self.D * dx + (goal - start)*f*s) / tau
+        return (self.K*(goal-x) - self.D*dx + (goal-start)*f*s) / tau
   
     def fs(self, y, dy, ddy, start, goal, tau, s):
-        return ((-1 * self.K * (goal - y) + self.D * dy + tau * ddy) / (goal - start))
+        return ((-1 * self.K*(goal-y) + self.D*dy + tau*ddy) / (goal-start))
         
 class ImprovedFormulation(object):
     
@@ -36,11 +35,11 @@ class ImprovedFormulation(object):
         self.K = K
         self.D = 2.0 * np.sqrt(self.K)    
     
-    def acceleration(self, K, D, x, dx, start, goal, tau, f, s):
-        return (K * (goal - x) - D * dx - K * (goal - start) * s + K * f) / tau
+    def acceleration(self, x, dx, start, goal, tau, f, s):
+        return (self.K*(goal-x) - self.D*dx - self.K*(goal-start)*s + self.K*f*s) / tau
     
-    def fs(self, K, D, y, dy, ddy, start, goal, tau, s):
-        return ((tau**2 * ddy + D * dy * tau) / K ) - (goal - y) + ((goal - start) * s)
+    def fs(self, y, dy, ddy, start, goal, tau, s):
+        return ((tau**2*ddy + self.D*dy*tau) / self.K) - (goal-y) + ((goal-start)*s)
   
 # -----------------------------------------------------------------------------
   
@@ -193,14 +192,10 @@ class DMPs_discrete(object):
         # efficiently calculate weights for BFs using weighted linear regression
         weights = np.zeros((self.dmps, self.bfs))
         for d in range(self.dmps):
-            # spatial scaling term
-            #k = (self.goal[d] - self.y0[d])
-            k = 1.0
-            
             for b in range(self.bfs):
                 numer = np.sum(x_track    * psi_track[:,b] * f_target[:,d])
                 denom = np.sum(x_track**2 * psi_track[:,b])
-                weights[d,b] = numer / (k * denom)
+                weights[d,b] = numer / denom
         
         return weights
 
@@ -236,9 +231,7 @@ class DMPs_discrete(object):
         psi = self.gen_psi(x)
 
         for idx in range(self.dmps):
-
-            # generate the forcing function
-            #self.f[idx] = self.gen_front_term(x, idx) * (np.dot(psi, self.w[idx])) / np.sum(psi)            
+            # generate the forcing function (f)
             self.f[idx] = (np.dot(psi, self.w[idx])) / np.sum(psi)            
 
             # DMP acceleration
