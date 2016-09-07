@@ -117,7 +117,6 @@ class DMPs_discrete(object):
 
         self.c = np.ones(len(des_c)) 
         for n in range(len(des_c)): 
-            # x = exp(-c), solving for c
             self.c[n] = -np.log(des_c[n])
 
         # set variance of Gaussian basis functions
@@ -154,16 +153,7 @@ class DMPs_discrete(object):
 
         if isinstance(x, np.ndarray):
             x = x[:,None]
-        return np.exp(-self.h * (x - self.c)**2)
-
-    def gen_front_term(self, x, dmp_num):
-        '''
-        Generates the diminishing front term on the forcing term.
-        
-        x float: the current value of the canonical system acceleration
-        dmp_num int: the index of the current dmp
-        '''
-        return x * (self.goal[dmp_num] - self.y0[dmp_num])
+        return np.exp(-self.h * (x - self.c)**2)        
 
     def find_force_function(self, dmp_num, y, dy, ddy, s):
         
