@@ -12,3 +12,4 @@ Usefull information about DMPs could be found in:
 * A.J. Ijspeert, J. Nakanishi, H. Hoffmann, P. Pastor, S. Schaal.
   Dynamical movement primitives: learning attractor models for motor behaviors
 * T. DeWolf.
+  [Compilation of Dynamical Movement Primitives](https://studywolf.wordpress.com/category/robotics/dynamic-movement-primitive), Study Wolf Blog
