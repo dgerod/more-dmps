@@ -12,34 +12,38 @@ class TdwFormulation(object):
         self.by = by
     
     def acceleration(self, x, dx, start, goal, tau, f, s):
-        return (self.ay *  (self.by * (goal-x) - dx/tau) + (goal-start)*f*s) * tau       
-               
-    def fs(self, y, dy, ddy, start, goal, tau, s):        
-        return (ddy - self.ay * (self.by * (goal-y) - dy) / (goal-start))
+        return (self.ay *  (self.by * (goal-x) - dx/tau) + (goal-start)*f) * tau       
+            
+    def fs(self, x, dx, ddx, start, goal, tau, s):        
+        return (ddx - self.ay * (self.by * (goal-x) - dx) / (goal-start)) 
         
 class OriginalFormulation(object):
 
-    def __init__(self, K=100.):
+    def __init__(self, K=100., D=None):
         self.K = K
-        self.D = 2.0 * np.sqrt(self.K)    
+        if D is None: 
+            D = 2.0 * np.sqrt(self.K)    
+        self.D = D
             
     def acceleration(self, x, dx, start, goal, tau, f, s):
-        return (self.K*(goal-x) - self.D*dx + (goal-start)*f*s) / tau
+        return (self.K*(goal-x) - self.D*dx + (goal-start)*f) / tau
   
-    def fs(self, y, dy, ddy, start, goal, tau, s):
-        return ((-1 * self.K*(goal-y) + self.D*dy + tau*ddy) / (goal-start))
+    def fs(self, x, dx, ddx, start, goal, tau, s):
+        return (tau*ddx - self.K*(goal-x) + self.D*dx) / (goal-start)
         
 class ImprovedFormulation(object):
     
-    def __init__(self, K=100.):
+    def __init__(self, K=100., D=None):
         self.K = K
-        self.D = 2.0 * np.sqrt(self.K)    
+        if D is None: 
+            D = 2.0 * np.sqrt(self.K)    
+        self.D = D
     
     def acceleration(self, x, dx, start, goal, tau, f, s):
-        return (self.K*(goal-x) - self.D*dx - self.K*(goal-start)*s + self.K*f*s) / tau
+        return (self.K*(goal-x) - self.D*dx - self.K*(goal-start)*s + self.K*f) / tau
     
-    def fs(self, y, dy, ddy, start, goal, tau, s):
-        return ((tau**2*ddy + self.D*dy*tau) / self.K) - (goal-y) + ((goal-start)*s)
+    def fs(self, x, dx, ddx, start, goal, tau, s):
+        return ((tau**2*ddx + self.D*dx*tau) / self.K) - (goal-x) + (goal-start)*s
   
 # -----------------------------------------------------------------------------
   
@@ -59,11 +63,6 @@ class DMPs_discrete(object):
         by int: gain on attractor term y dynamics
         '''
         
-        # call super class constructor
-        # ---
-
-        self.pattern = 'discrete'
-
         self.dmps = dims 
         self.bfs = bfs 
         self.dt = dt
@@ -91,14 +90,12 @@ class DMPs_discrete(object):
         self.f = np.zeros(self.dmps)         
         
         # set up the CS 
-        self.cs = CanonicalSystem(pattern=self.pattern, dt=self.dt, **kwargs)
+        self.cs = CanonicalSystem(pattern='discrete', dt=self.dt, **kwargs)
         self.time_steps = int(self.cs.run_time / self.dt)
 
         # set up the DMP system
         self.reset_state()
-        
-        # ---
-
+   
         self.prep_centers_and_variances()
         self.check_offset()
         
@@ -129,9 +126,9 @@ class DMPs_discrete(object):
         if they are, offset slightly so that the forcing term is not 0.
         '''
 
-        for d in range(self.dmps):
-            if (self.y0[d] == self.goal[d]):
-                self.goal[d] += 1e-4
+        for idx in range(self.dmps):
+            if (self.y0[idx] == self.goal[idx]):
+                self.goal[idx] += 1e-4
 
     def set_goal(self, y_des): 
         '''
@@ -155,6 +152,20 @@ class DMPs_discrete(object):
             x = x[:,None]
         return np.exp(-self.h * (x - self.c)**2)        
 
+    def gen_forcing_term(self, x, dmp_num, scale=False):
+        """Calculates the complete forcing term .
+
+        x float: the current value of the canonical system (s)
+        dmp_num int: the index of the current dmp
+        scaled bool: apply scalation (g-y0) to the forcing term (T/F)
+        """
+        
+        psi = self.gen_psi(x)
+        f = x * ((np.dot(psi, self.w[dmp_num])) / np.sum(psi))
+        if scale:
+            f = f * (self.goal[dmp_num] - self.y0[dmp_num])
+        return f
+                
     def find_force_function(self, dmp_num, y, dy, ddy, s):
         
         d = dmp_num
@@ -180,14 +191,14 @@ class DMPs_discrete(object):
         psi_track = self.gen_psi(x_track)
 
         # efficiently calculate weights for BFs using weighted linear regression
-        weights = np.zeros((self.dmps, self.bfs))
+        self.w = np.zeros((self.dmps, self.bfs))
         for d in range(self.dmps):
             for b in range(self.bfs):
                 numer = np.sum(x_track    * psi_track[:,b] * f_target[:,d])
                 denom = np.sum(x_track**2 * psi_track[:,b])
-                weights[d,b] = numer / denom
+                self.w[d,b] = numer / denom
         
-        return weights
+        return (x_track, psi_track)
 
     def reset_state(self):
         '''
@@ -217,16 +228,12 @@ class DMPs_discrete(object):
             cs_args['error_coupling'] = 1.0 / (1.0 + 10*dist)
         x = self.cs.step(**cs_args)
 
-        # generate basis function activation
-        psi = self.gen_psi(x)
-
         for idx in range(self.dmps):
-            # generate the forcing function (f)
-            self.f[idx] = (np.dot(psi, self.w[idx])) / np.sum(psi)            
 
-            # DMP acceleration
+            # Calcualte acceleration based on f(s)
+            self.f[idx] = self.gen_forcing_term(x, idx)            
             self.ddy[idx] = self.calculate_acceleration(idx, tau, self.f[idx], x)
-
+            
             # Correct acceleration
             if external_force is not None:
                 self.ddy[idx] += external_force[idx]
@@ -280,7 +287,7 @@ class DMPs_discrete(object):
         ddy_des = np.diff(dy_des) / self.dt
         # add zero to the beginning of every row
         ddy_des = np.hstack((np.zeros((self.dmps, 1)), ddy_des))
-
+        
         # Compute F and weights
         # ---
 
@@ -293,14 +300,11 @@ class DMPs_discrete(object):
             f_desired[:,idx] = self.find_force_function(idx, y_des, dy_des, ddy_des, x)
         
         # efficiently generate weights to realize f_target
-        self.w = self.compute_weights(f_desired)
+        self.x_track, self.psi_track = self.compute_weights(f_desired)
         self.f_desired = f_desired
         
         self.reset_state()
-        self.f_predicted = np.zeros((y_des.shape[1], self.dmps))
-        self.f = np.zeros(self.dmps)         
-
-        return y_des
+        return y_des, dy_des, ddy_des
 
     def plan(self, time_steps=None, **kwargs):
         '''
