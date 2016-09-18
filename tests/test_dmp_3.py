@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pylab as plt
 
 from dmp_3 import *
-from utils.min_jerk_traj import trajectory
+from utils.stg.min_jerk_traj import trajectory
   
 # start and goal of the movement (1-dim)
 # trajectory is a list of 3-tuples with (pos,vel,acc)

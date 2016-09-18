@@ -48,7 +48,7 @@ plt.show()
 #
 # -------------------------------
 
-from utils.min_jerk_traj import trajectory
+from utils.stg.min_jerk_traj import trajectory
 
 duration = 1.0
 delta_t = 0.001
