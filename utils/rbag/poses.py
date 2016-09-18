@@ -31,13 +31,13 @@ class PosesBagLoader(BagLoader):
         # Loads messages from an open bag and stored them as a 'CartTrajectory'.
 
         poses = []
-        for topic, msg, t in Bag.read_messages( self._TopicName ):
+        for topic, msg, t in Bag.read_messages(self._TopicName):
 
-            position = np.array( [msg.pose.position.x, msg.pose.position.y, msg.pose.position.z] )
+            position = np.array([msg.pose.position.x, msg.pose.position.y, msg.pose.position.z])
 
             x = msg.pose.orientation.x; y = msg.pose.orientation.y
             z = msg.pose.orientation.z; w = msg.pose.orientation.w
-            orientation = np.array( tf.transformations.euler_from_quaternion([x,y,z,w]) )
+            orientation = np.array(tf.transformations.euler_from_quaternion([x,y,z,w]))
 
             poses.append( np.concatenate([position, orientation]) )
 

@@ -30,7 +30,7 @@ class JointsBagLoader(BagLoader):
         # Loads messages from an open bag and stored them as a 'PtpTrajectory'.
 
         jnts = []
-        for topic, msg, t in Bag.read_messages( self._TopicName ):
+        for topic, msg, t in Bag.read_messages(self._TopicName):
             jnts.append( np.array(msg.position) )
 
         Traj = pdt.PtpTrajectory()

@@ -31,13 +31,13 @@ class BagLoader(object):
         # Read the 'info' message where description of the bag is stored.
         # Only 1 information message is allowed.
         Info = ""
-        for topic, msg, t in Bag.read_messages( "info" ):
+        for topic, msg, t in Bag.read_messages("info"):
             Info = msg.data
         return Info
 
     def _checkTopicExists(self, Bag):
 
-        for topic, message, t in Bag.read_messages( self._TopicName ):
+        for topic, message, t in Bag.read_messages(self._TopicName):
             pass
 
         try: message
@@ -76,7 +76,7 @@ class BagLoaderWithMsgImporter(BagLoader):
     def _readMessages(self, Bag):
         # Read all messages from the bag.
         messages = []
-        for topic, msg, t in Bag.read_messages( self._TopicName ):
+        for topic, msg, t in Bag.read_messages(self._TopicName):
             messages.append(msg)
         # And tranform them using importer
         return self._MsgImporter.parse(messages)
@@ -131,7 +131,7 @@ class BagSaverWithMsgExporter(BagSaver):
     def __init__(self, TopicName, MsgExporter):
         """Create an object adding an exporter."""
         super(BagLoaderWithMsgImporter,self).__init__(TopicName, "")
-        self._MsgImporter = MsgImporter
+        self._MsgExporter = MsgExporter
 
     def _writeMessages(self, Bag, Data):
         # Tranform data using importer
